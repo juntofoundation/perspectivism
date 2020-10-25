@@ -4,8 +4,6 @@
 
     export let perspective: Perspective
     export let languageController: LanguageController
-    export let linkRepoController: LinkRepoController
-    export let IPFS: object
 
     import IconButton from '@smui/icon-button';
     import Fab, {Icon, Label} from '@smui/fab';
@@ -13,8 +11,6 @@
     import { exprRef2String } from '../acai/ExpressionRef';
     import ExpressionIcon from './ExpressionIcon.svelte';
     import iconComponentFromString from './iconComponentFromString';
-    import type LinkRepoController from '../main-thread/LinkRepoController';
-    import LinksStore from '../stores/LinksStore'
     import ConstructionMenu from './ConstructionMenu.svelte'
     import PerspectiveSettings from './PerspectiveSettings.svelte';
     import ExpressionContextMenu from "./ExpressionContextMenu.svelte";
@@ -24,24 +20,27 @@
     import { gql } from '@apollo/client';
 
     $: if(perspective) {
-        console.log("SUBSCRIBING...")
         getClient().subscribe({
         query: gql`
-            subscription LinkAdded($perspectiveUUID: String) {
-                linkAdded(perspectiveUUID: $perspectiveUUID) {
-                    author { did }
+            subscription {
+                linkAdded(perspectiveUUID: "${perspective.uuid}") {
                     timestamp
-                    data {
-                        source
-                        predicate
-                        target
-                    }
                 }
-            }
-        `, 
-        variables: {perspectiveUUID: perspective.uuid}
-        }).subscribe({
-            next: ({ data }) => { console.log("GQL| LINK ADDED", data) },
+            }   
+        `}).subscribe({
+            next: () => linksStore.fetchMore({}),
+            error: (e) => console.error(e)
+        })
+
+        getClient().subscribe({
+        query: gql`
+            subscription {
+                linkRemoved(perspectiveUUID: "${perspective.uuid}") {
+                    timestamp
+                }
+            }   
+        `}).subscribe({
+            next: () => linksStore.refetch({}),
             error: (e) => console.error(e)
         })
     }
@@ -61,16 +60,22 @@
     $: ADD_LINK = mutation(gql`
         mutation AddLink($link: String){
             addLink(input: { perspectiveUUID: "${perspective.uuid}", link: $link }) {
-                author
+                author { did }
                 timestamp
-                data
+                data {
+                    source
+                    predicate
+                    target
+                }
             }
         }
     `)
 
     $: UPDATE_LINK = mutation(gql`
         mutation UpdateLink($oldLink: String, $newLink: String){
-            updateLink(input: { perspectiveUUID: "${perspective.uuid}", oldLink: $oldLink, newLink: $newLink }) 
+            updateLink(input: { perspectiveUUID: "${perspective.uuid}", oldLink: $oldLink, newLink: $newLink }) {
+                timestamp
+            }
         }
     `)
 

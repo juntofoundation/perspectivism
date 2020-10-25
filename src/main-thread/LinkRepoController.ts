@@ -1,5 +1,4 @@
 import Link, { hashLinkExpression, linkEqual, LinkQuery } from "../acai/Links";
-import ExpressionRef, { parseExprURL } from "../acai/ExpressionRef";
 import type Perspective from "../acai/Perspective";
 import { ipcMain } from 'electron'
 import { SHA3 } from "sha3";
@@ -7,105 +6,19 @@ import type Expression from "../acai/Expression";
 import type Agent from "../acai/Agent";
 import type { LanguageController } from "./LanguageController";
 import type LanguageRef from "../acai/LanguageRef";
-import { createGraphQLExecutor } from 'electron-graphql'
-import { buildSchema } from 'graphql'
-import { loadSchema } from '@graphql-tools/load'
-import { GraphQLFileLoader } from '@graphql-tools/graphql-file-loader'
-import { PubSub, withFilter } from 'graphql-subscriptions';
-
-const LINK_ADDED_TOPIC = 'link-added-topic'
-const LINK_REMOVED_TOPIC = 'link-removed-topic'
-
-const schemaPromise = loadSchema('./src/main-thread/schema.graphql', {
-    loaders: [ new GraphQLFileLoader ]
-})
-
-
-var rootValue = { hello: () => 'Hello world!' };
-
+import * as PubSub from './PubSub'
 
 export default class LinkRepoController {
     #root: any;
     #agent: Agent;
     #languageController: LanguageController
-    #pubsub: PubSub
+    #pubsub: any
 
     constructor({gun, languageController, agent}) {
         this.#root = gun.get('link-repositories')
         this.#agent = agent
         this.#languageController = languageController
-        this.#pubsub = new PubSub();
-
-        schemaPromise.then(schema => {
-            // create GraphQL executor
-            const gqlExecutor = createGraphQLExecutor({
-                // electron IPC channel (base name)
-                channel: 'graphql-electron',
-                schema,
-                rootValue: this.graphQlResolver(),
-                contextValue: {}
-            })
-            
-            // init GraphQL executor
-            gqlExecutor.init()
-        })
-    }
-
-    private graphQlResolver(): object {
-        return {
-            hello: () => 'Hello world!',
-            links: async (params) => {
-                const { perspectiveUUID, query } = params
-                const perspective = { uuid: perspectiveUUID } as Perspective
-                const result = await this.getLinks(perspective, query)
-                return result
-            },
-            expression: (url: String) => {
-                const ref = parseExprURL(url.toString())
-                return this.#languageController.getExpression(ref)
-            },
-            addLink: (params) => {
-                console.log("GQL| addLink:", params)
-                let { perspectiveUUID, link } = params.input
-                const perspective = { uuid: perspectiveUUID } as Perspective
-                link = JSON.parse(link)
-                return this.addLink(perspective, link)
-            },
-            updateLink: (params) => {
-                console.log("GQL| updateLink:", params)
-                let { perspectiveUUID, oldLink, newLink } = params.input
-                const perspective = { uuid: perspectiveUUID } as Perspective
-                oldLink = JSON.parse(oldLink)
-                newLink = JSON.parse(newLink)
-                this.updateLink(perspective, oldLink, newLink)
-                return newLink
-            },
-            removeLink: (params) => {
-                console.log("GQL| removeLink:", params)
-                let { perspectiveUUID, link } = params.input
-                const perspective = { uuid: perspectiveUUID } as Perspective
-                link = JSON.parse(link)
-                this.removeLink(perspective, link)
-                return true
-            },
-            linkAdded: {
-                subscribe: perspectiveUUID => {
-                    console.log("NEW SUBSCRIPETION", perspectiveUUID)
-                    return withFilter(
-                        () => this.#pubsub.asyncIterator(LINK_ADDED_TOPIC), 
-                        payload => payload.perspective.uuid === perspectiveUUID
-                    )
-                },
-                resolve: payload => payload.link
-            },
-            linkRemoved: {
-                subscribe: perspectiveUUID => withFilter(
-                    () => this.#pubsub.asyncIterator(LINK_REMOVED_TOPIC), 
-                    payload => payload.perspective.uuid === perspectiveUUID
-                ),
-                resolve: payload => payload.link
-            }
-        }
+        this.#pubsub = PubSub.get()
     }
 
     private getPerspective(perspective: Perspective): any {
@@ -222,7 +135,8 @@ export default class LinkRepoController {
         // 2. from target to source
         this.getPerspective(p).get('targets').get(link.target).set(addr)
 
-        this.#pubsub.publish(LINK_ADDED_TOPIC, { perspective: p, link: linkExpression })
+
+        this.#pubsub.publish(PubSub.LINK_ADDED_TOPIC, { perspective: p, linkAdded: linkExpression })
 
         return linkExpression
     }
@@ -251,8 +165,8 @@ export default class LinkRepoController {
         this.getPerspective(p).get('links').get(addr).put(newLink)
         this.getPerspective(p).get('links').get(addr).load(loaded => console.log("loaded:", loaded))
         this.callLinksAdapter(p, 'updateLink', oldLink, newLink)
-        this.#pubsub.publish(LINK_ADDED_TOPIC, { perspective: p, link: newLink })
-        this.#pubsub.publish(LINK_REMOVED_TOPIC, { perspective: p, link: oldLink })
+        this.#pubsub.publish(PubSub.LINK_ADDED_TOPIC, { perspective: p, link: newLink })
+        this.#pubsub.publish(PubSub.LINK_REMOVED_TOPIC, { perspective: p, link: oldLink })
     }
 
     async removeLink(p: Perspective, linkExpression: Expression) {
@@ -265,7 +179,7 @@ export default class LinkRepoController {
         this.getPerspective(p).get('root-links').unset(addr)
         this.getPerspective(p).get('links').get(addr)?.put({})
         this.callLinksAdapter(p, 'removeLink', linkExpression)
-        this.#pubsub.publish(LINK_REMOVED_TOPIC, { perspective: p, link })
+        this.#pubsub.publish(PubSub.LINK_REMOVED_TOPIC, { perspective: p, link })
     }
 
     private async getLinksLocal(p: Perspective, query: LinkQuery): Promise<Expression[]> {

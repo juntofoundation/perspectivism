@@ -16,8 +16,9 @@ import type Address from '../acai/Address';
 const builtInLanguages = [
     'note-ipfs',
     'url-iframe',
-    'gun-links',
-    'ipfs-links'
+    //'gun-links',
+    'ipfs-links',
+    'junto-shortform'
 ].map(l => `./src/languages/${l}/build/bundle.js`)
 
 const aliases = {
@@ -41,6 +42,7 @@ export class LanguageController {
         this.#linkObservers = []
 
         builtInLanguages.forEach( bundle => {
+            console.log(bundle);
             const bundleBytes = fs.readFileSync(bundle)
             const hash = multihashes.toHexString(multihashing(bundleBytes, 'sha2-256'))
             const { default: create, name } = require(path.join(process.env.PWD, bundle))
@@ -129,6 +131,7 @@ export class LanguageController {
     getSettings(lang: LanguageRef): object {
         const FILEPATH = path.join(Config.languagesPath, lang.name, 'settings.json')
         if(fs.existsSync(FILEPATH)) {
+            console.log("got path");
             return JSON.parse(fs.readFileSync(FILEPATH).toString())
         } else {
             return {}

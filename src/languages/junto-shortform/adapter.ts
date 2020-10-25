@@ -1,41 +1,63 @@
 import type Address from '../../acai/Address'
 import Agent from '../../acai/Agent'
 import type Expression from '../../acai/Expression'
-import type { ExpressionAdapter } from '../../acai/Language'
+import type { ExpressionAdapter, GetByAuthorAdapter, PublicSharing } from '../../acai/Language'
 import type LanguageContext from '../../acai/LanguageContext'
 
 import axios from 'axios'
 
-export default class ShortFormAdapter implements ExpressionAdapter {
+//TODO implement get all adapter that can take a set of expression addresses and return the data for each of them
+
+class ShortFormPutAdapter implements PublicSharing {
     #agent: Agent
     #accessToken: String
     #url: String = "https://api.junto.foundation/v0.2.2-alpha/"
 
     constructor(context: LanguageContext) {
         this.#agent = context.agent
-        this.#accessToken = context.accessTokens.get("junto-access-token")
+        //@ts-ignore
+        this.#accessToken = context.customSettings.accessToken;
 
         axios.defaults.headers.common['authorization'] = this.#accessToken
         axios.defaults.headers.common['host'] = this.#url
     }
 
-    async create_public_expression(shortForm: object): Promise<Address> {
+    async createPublic(shortForm: object): Promise<Address> {
         const expression = {
             author: this.#agent.did,
             timestamp: new Date().toString(),
             data: shortForm,
         }
 
+        //Todo post the actual data
         return axios.post(this.#url + "expressions")
             .then(function (response) {
-                response.data.address
+                return response.data.address
             })
     }
+}
 
-    async get_expression_by_address(address: Address): Promise<void | Expression> {
+export default class ShortFormAdapter implements ExpressionAdapter {
+    #agent: Agent
+    #accessToken: String
+    #url: String = "https://api.junto.foundation/v0.2.2-alpha/"
+
+    putAdapter: PublicSharing
+
+    constructor(context: LanguageContext) {
+        this.#agent = context.agent
+        //@ts-ignore
+        this.#accessToken = context.customSettings.accessToken;
+        this.putAdapter = new ShortFormPutAdapter(context)
+
+        axios.defaults.headers.common['authorization'] = this.#accessToken
+        axios.defaults.headers.common['host'] = this.#url
+    }
+
+    async get(address: Address): Promise<void | Expression> {
         const expression = await axios.get(this.#url + "expressions/" + address)
             .then(function (response) {
-                response.data
+                return response.data
             })
 
         return {
@@ -50,7 +72,7 @@ export default class ShortFormAdapter implements ExpressionAdapter {
     async get_by_author(author: Agent, count: number, page: number): Promise<void | Expression> {
         const expressions = await axios.get(this.#url + "users/" + author.did + "?pagination_position=" + page.toString)
             .then(function (response) {
-                response.data
+                return response.data
             })
         expressions.result.forEach(function(part, index, expressionsArray) {
             expressionsArray[index] = {

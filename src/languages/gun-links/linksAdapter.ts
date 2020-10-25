@@ -98,7 +98,7 @@ export class GunLinksAdapter implements LinksAdapter {
         return linkNode
     }
 
-    async getLinksFrom(source: ExpressionRef): Promise<Expression[]> {
+    async getLinks(source: ExpressionRef): Promise<Expression[]> {
         return await new Promise((resolve) => {
             this.#gun
                 .get('sources')

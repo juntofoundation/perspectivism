@@ -168,8 +168,8 @@ function createResolvers(languageController, linkRepoController) {
 }
 
 
-export async function startServer(linkRepoController) {
-    const resolvers = createResolvers(linkRepoController)
+export async function startServer(languageController, linkRepoController) {
+    const resolvers = createResolvers(languageController, linkRepoController)
     const server = new ApolloServer({ typeDefs, resolvers });
     const { url, subscriptionsUrl } = await server.listen()
     return { url, subscriptionsUrl }

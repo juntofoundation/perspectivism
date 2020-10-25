@@ -3,4 +3,5 @@
   
     "include": ["*.ts"],
     "exclude": ["node_modules/*", "__sapper__/*", "public/*"],
+    "allowJs": true
   }

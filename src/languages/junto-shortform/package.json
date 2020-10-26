@@ -29,7 +29,6 @@
     "tslib": "^2.0.0",
     "typescript": "^3.9.3",
     "axios": "^0.20.0",
-    "amazon-cognito-identity-js": "4.5.0",
-    "rollup-plugin-copy2": "^0.2.0"
+    "amazon-cognito-identity-js": "4.5.0"
   }
 }

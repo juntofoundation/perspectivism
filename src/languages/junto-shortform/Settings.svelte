@@ -60,6 +60,13 @@
         <input bind:value={username}>
         <input bind:value={password}>
         <button on:click={()=>signIn(username, password)}>Sign In</button>
+        <br>
+        {#if settings.cognitoSession != undefined}
+            Signed In
+        {:else}
+            Signed Out
+        {/if}
+
     {:else}
         Loading...
     {/if}

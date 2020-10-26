@@ -7,6 +7,7 @@ import Adapter from './adapter'
 import Icon from './build/Icon.js'
 import ConstructorIcon from './build/ConstructorIcon.js'
 import { JuntoSettingsUI } from './SettingsUI'
+import { ShortFormExpressionUI } from './shortFormExpressionUI'
 
 
 function iconFor(expression: Address): string {
@@ -25,7 +26,8 @@ export const name: string = "junto-shortform"
 
 export default function create(context: LanguageContext): Language {
     const expressionAdapter = new Adapter(context)
-    const settingsUI = new JuntoSettingsUI(context)
+    const settingsUI = new JuntoSettingsUI()
+    const expressionUI = new ShortFormExpressionUI()
 
     return {
         name: 'junto-centralized',
@@ -33,6 +35,7 @@ export default function create(context: LanguageContext): Language {
         iconFor,
         constructorIcon,
         interactions,
-        settingsUI
+        settingsUI,
+        expressionUI
     } as Language
 }

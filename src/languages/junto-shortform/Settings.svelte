@@ -1,8 +1,55 @@
 <svelte:options tag={null}/>
 
 <script lang="ts">
+    import Icon from "./Icon.svelte";
+    import {
+        CognitoUserPool,
+        CognitoUserAttribute,
+        CognitoUser,
+        AuthenticationDetails
+    } from 'amazon-cognito-identity-js';
+
+    let poolData = {
+        UserPoolId: 'us-east-2_Cd8BaNB2i', // Your user pool id here
+        ClientId: '6mi247legoqtbohjrrffga2lp4', // Your client id here
+    };
+    let userpool = new CognitoUserPool(poolData);
     export let settings: object
-    export let signIn
+
+    export let signIn = function signIn(username: string, password: string) {
+        var authenticationData = {
+            Username: username,
+            Password: password,
+        };
+        var authenticationDetails = new AuthenticationDetails(
+            authenticationData
+        );
+        var userData = {
+            Username: username,
+            Pool: userpool,
+        };
+        var cognitoUser = new CognitoUser(userData);
+
+        cognitoUser.authenticateUser(authenticationDetails, {
+            onSuccess: function(result) {
+                signInSuccess(result)
+            },
+         
+            onFailure: function(err) {
+                alert(err.message || JSON.stringify(err));
+            },
+        });
+    }
+
+    function signInSuccess(result) {
+        console.log("Signin Success!")
+        //@ts-ignore
+        settings.cognitoSession = {
+            accessToken: result.getAccessToken().getJwtToken(),
+            idToken: result.getIdToken().getJwtToken(),
+            refreshToken: result.getRefreshToken().getToken()
+        };
+    }
 
     let username = ""
     let password = ""

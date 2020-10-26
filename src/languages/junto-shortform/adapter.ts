@@ -16,7 +16,7 @@ class ShortFormPutAdapter implements PublicSharing {
     constructor(context: LanguageContext) {
         this.#agent = context.agent
         //@ts-ignore
-        this.#accessToken = context.customSettings.accessToken;
+        this.#accessToken = context.customSettings.cognitoSession ? context.customSettings.cogntioSession.accessToken : undefined;
 
         axios.defaults.headers.common['authorization'] = this.#accessToken
         axios.defaults.headers.common['host'] = this.#url
@@ -47,7 +47,7 @@ export default class ShortFormAdapter implements ExpressionAdapter {
     constructor(context: LanguageContext) {
         this.#agent = context.agent
         //@ts-ignore
-        this.#accessToken = context.customSettings.accessToken;
+        this.#accessToken = context.customSettings.cognitoSession ? context.customSettings.cogntioSession.accessToken : undefined;
         this.putAdapter = new ShortFormPutAdapter(context)
 
         axios.defaults.headers.common['authorization'] = this.#accessToken

@@ -3,13 +3,13 @@
 <script lang="ts">
     export let commitExpression
 
-    let text = ""
+    let body = ""
 
 </script>
 
 <div class="container">
-    <input bind:value={text}>
-    <button on:click={()=>commitExpression(text)}>Commit</button>
+    <input bind:value={body}>
+    <button on:click={()=>commitExpression(body)}>Commit</button>
 </div>
 
 

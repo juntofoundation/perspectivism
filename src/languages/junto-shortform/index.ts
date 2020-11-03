@@ -3,7 +3,7 @@ import type Agent from '../../acai/Agent'
 import type Language from '../../acai/Language'
 import type LanguageContext from '../../acai/LanguageContext'
 import type { Interaction } from '../../acai/Language'
-import Adapter from './adapter'
+import ShortFormAdapter from './adapter'
 import Icon from './build/Icon.js'
 import ConstructorIcon from './build/ConstructorIcon.js'
 import { JuntoSettingsUI } from './SettingsUI'
@@ -25,12 +25,12 @@ function interactions(a: Agent, expression: Address): Interaction[] {
 export const name: string = "junto-shortform"
 
 export default function create(context: LanguageContext): Language {
-    const expressionAdapter = new Adapter(context)
+    const expressionAdapter = new ShortFormAdapter(context)
     const settingsUI = new JuntoSettingsUI()
     const expressionUI = new ShortFormExpressionUI()
 
     return {
-        name: 'junto-centralized',
+        name,
         expressionAdapter,
         iconFor,
         constructorIcon,

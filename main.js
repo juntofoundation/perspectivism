@@ -1,12 +1,13 @@
 require = require("esm")(module/*, options*/)
 module.exports = require("./main.js")
 const { app, BrowserWindow, ipcMain } = require('electron')
-const path = require('path')
-const fs = require('fs')
+const express = require('express')
+const expressApp = express()
 
 const Config = require('./src/main-thread/Config')
 const Gun = require('./src/main-thread/Gun')
 const IPFS = require('./src/main-thread/IPFS')
+const PerspectivesController = require('./src/main-thread/PerspectivesController')
 const LinkRepoController = require('./src/main-thread/LinkRepoController')
 const LanguageController = require('./src/main-thread/LanguageController')
 const GraphQL = require('./src/main-thread/GraphQL')
@@ -16,9 +17,10 @@ const gun = Gun.init(Config.dataPath)
 IPFS.init().then((IPFS) => {
   const agent = { did: 'did:local-test-agent' }
   const context = { agent, IPFS }
+  const perspectivesController = PerspectivesController.init(Config.rootConfigPath)
   const languageController = LanguageController.init(context)
   const linkRepoController = LinkRepoController.init({gun, languageController, agent})
-  GraphQL.startServer(languageController, linkRepoController).then(({ url, subscriptionsUrl }) => {
+  GraphQL.startServer(perspectivesController, languageController, linkRepoController).then(({ url, subscriptionsUrl }) => {
     console.log(`🚀  GraphQL Server ready at ${url}`)
     console.log(`🚀  GraphQL subscriptions ready at ${subscriptionsUrl}`)
   })
@@ -53,6 +55,11 @@ function createWindow () {
   return win
 }
 
+function serveUI() {
+  expressApp.use(express.static(`${__dirname}/public`))
+  expressApp.listen(9090)
+}
+
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
@@ -70,21 +77,4 @@ app.on('activate', () => {
   }
 })
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
-
-ipcMain.handle('read-perspectives', (event) => {
-  const FILENAME = 'perspectives.json'
-  const FILEPATH = path.join(Config.rootConfigPath, FILENAME)
-  if(fs.existsSync(FILEPATH)) {
-    return JSON.parse(fs.readFileSync(FILEPATH))
-  } else {
-    return {}
-  }
-})
-
-ipcMain.handle('write-perspectives', (event, perspectives) => {
-  const FILENAME = 'perspectives.json'
-  const FILEPATH = path.join(Config.rootConfigPath, FILENAME)
-  fs.writeFileSync(FILEPATH, JSON.stringify(perspectives))
-})
+serveUI()

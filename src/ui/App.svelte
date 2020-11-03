@@ -1,8 +1,4 @@
 <script lang="ts">
-	import type { LanguageController } from '../main-thread/LanguageController';
-	export let perspectiveStore: object;
-	export let languageController: LanguageController;
-	export let linkRepoController: LinkRepoController;
 	import TopAppBar, {Row, Section, Title, FixedAdjust, ShortFixedAdjust} from '@smui/top-app-bar';
 	import IconButton from '@smui/icon-button';
 	import Drawer, {AppContent, Content, Header, Title as DrawerTitle, Subtitle, Scrim} from '@smui/drawer';
@@ -13,10 +9,10 @@
 	import Perspective from './Perspective.svelte';
 	import LanguagesSettings from './LanguagesSettings.svelte'
 	import PerspectiveSettings from './PerspectiveSettings.svelte'
-	import type LinkRepoController from '../main-thread/LinkRepoController';
 	import { ApolloClient, InMemoryCache } from "@apollo/client";
 	import { WebSocketLink } from '@apollo/client/link/ws';
-	import { setClient } from "svelte-apollo";
+	import { mutation, query, setClient } from "svelte-apollo";
+	import { ADD_PERSPECTIVE, PERSPECTIVES, PERSPECTIVE_ADDED, PERSPECTIVE_REMOVED, PERSPECTIVE_UPDATED, REMOVE_PERSPECTIVE } from './graphql_queries';
 
 	const wsLink = new WebSocketLink({
 		uri: `ws://localhost:4000/graphql`,
@@ -38,15 +34,45 @@
   	});
   	setClient(client);
 
+	let perspectives = query(PERSPECTIVES)
+
 	let collapsed = false;
 	let collapsing = false;
 	let drawerOpen = false;
 	let drawer
-	let hovered = JSON.parse(JSON.stringify($perspectiveStore))
-
-	for(const pID in $perspectiveStore) {
-		linkRepoController.syncWithSharingAdapter($perspectiveStore[pID])
+	let hovered
+	$: if(!$perspectives.loading && $perspectives.data) {
+		hovered = {}
+		$perspectives.data.perspectives.forEach(p => {
+			hovered[p.uuid] = true
+		})
 	}
+	 	
+
+	//for(const pID in $perspectiveStore) {
+	//	linkRepoController.syncWithSharingAdapter($perspectiveStore[pID])
+	//}
+
+	client.subscribe({
+		query: PERSPECTIVE_ADDED
+	}).subscribe({
+		next: () => perspectives.fetchMore({}),
+		error: (e) => console.error(e)
+	})
+
+	client.subscribe({
+		query: PERSPECTIVE_UPDATED
+	}).subscribe({
+		next: () => perspectives.refetch({}),
+		error: (e) => console.error(e)
+	})
+
+	client.subscribe({
+		query: PERSPECTIVE_REMOVED
+	}).subscribe({
+		next: () => perspectives.refetch({}),
+		error: (e) => console.error(e)
+	})
 
 	let selectedMainView = {
 		perspective: null,
@@ -57,19 +83,28 @@
 	function createNewPerspective() {
 		let number = 1
 		let prefix = "New Perspective "
-		while(Object.keys($perspectiveStore).includes(prefix+number)) {
+		while($perspectives.data.perspectives.includes(prefix+number)) {
 			number++
 		}
 
 		const name = prefix+number
-		perspectiveStore.add({name})
+		mutation(ADD_PERSPECTIVE)({
+			variables: {
+				name
+			}
+		})
 	}
 
 	function deletePerspective(perspective) {
 		if(selectedMainView.perspective == perspective) {
 			selectedMainView.perspective = null
 		}
-		perspectiveStore.remove(perspective)
+
+		mutation(REMOVE_PERSPECTIVE)({
+			variables: {
+				uuid: perspective.uuid
+			}
+		})
 	}
 
 	function editPerspective(perspective) {
@@ -81,11 +116,11 @@
 	function editPerspectiveSubmit(event) {
 		const uuid = event.detail
 		console.log(uuid)
-		const perspective = $perspectiveStore[uuid]
-		perspectiveStore.update(perspective)
-		linkRepoController.syncWithSharingAdapter(perspective)
+		//const perspective = $perspectiveStore[uuid]
+		//perspectiveStore.update(perspective)
+		//linkRepoController.syncWithSharingAdapter(perspective)
 		if(selectedMainView.perspective == null) {
-			selectedMainView.perspective = uuid
+			selectedMainView.perspective = selectedMainView.edit
 			selectedMainView.settings = null
 			selectedMainView.edit = null
 		}
@@ -110,15 +145,21 @@
 		</Header>
 		<Content>
 		<List>
-			{#each Object.keys($perspectiveStore) as perspective}
+			{#if $perspectives.data?.perspectives?.length == 0}
+				<Chip><ChipText>No Perspectives yet</ChipText></Chip>
+			{/if}
+			{#if $perspectives.loading}
+				<Chip><ChipText>Loading...</ChipText></Chip>
+			{:else}
+			{#each $perspectives.data.perspectives as perspective}
 				<Item href="javascript:void(0)"
-					on:mouseenter="{e => hovered[perspective] = false}"
-					on:mouseleave="{e => hovered[perspective] = true}"
-					activated={selectedMainView.perspective == perspective}
+					on:mouseenter="{e => hovered[perspective.uuid] = false}"
+					on:mouseleave="{e => hovered[perspective.uuid] = true}"
+					activated={selectedMainView.perspective?.uuid == perspective.uuid}
 					on:click={() => selectedMainView = { perspective, settings: null }}
 				>
-					<Text>{$perspectiveStore[perspective].name}</Text>
-					{#if !hovered[perspective]}
+					<Text>{perspective.name}</Text>
+					{#if !hovered[perspective.uuid]}
 					<Meta>
 						<div on:click|stopPropagation="">
 							<Group variant="unelevated">
@@ -138,10 +179,6 @@
 				</Item>
 				
 			{/each}
-
-			{#if Object.keys($perspectiveStore).length == 0}
-
-			<Chip><ChipText>No Perspectives yet</ChipText></Chip>
 			{/if}
 	
 			<Item on:click={createNewPerspective}>
@@ -183,11 +220,11 @@
 			<Title>
 				Perspectivism
 				{#if selectedMainView.perspective}
-					> {$perspectiveStore[selectedMainView.perspective].name}
+					> {selectedMainView.perspective.name}
 				{:else if selectedMainView.settings }
 					> {selectedMainView.settings}
 				{:else if selectedMainView.edit }
-					> Editing Perspective "{$perspectiveStore[selectedMainView.edit].nameAdd }"
+					> Editing Perspective "{selectedMainView.edit.name }"
 				{/if}
 			</Title>
 		</Section>
@@ -195,18 +232,17 @@
 	</TopAppBar>
 
 	{#if selectedMainView.perspective}
-		<Perspective perspective={$perspectiveStore[selectedMainView.perspective]} 
+		<Perspective perspective={selectedMainView.perspective} 
 			on:settings-changed={editPerspectiveSubmit}
-			{...$$props} 
 		></Perspective>
 	{:else if selectedMainView.settings }
 		{#if selectedMainView.settings == 'languages'}
-			<LanguagesSettings languageController={languageController}></LanguagesSettings>
+			<LanguagesSettings></LanguagesSettings>
 		{/if}
 	{:else if selectedMainView.edit }
-		<PerspectiveSettings perspectiveId={selectedMainView.edit} 
+		<PerspectiveSettings perspective={JSON.parse(JSON.stringify(selectedMainView.edit))} 
 			on:submit={editPerspectiveSubmit}
-			{...$$props}
+			on:cancel={() => selectedMainView.edit = null}
 		></PerspectiveSettings>
 	{:else}
 		<h1>Welcome to Perspectivism!</h1>

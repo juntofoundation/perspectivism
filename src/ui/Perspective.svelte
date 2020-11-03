@@ -1,9 +1,7 @@
 <script lang="ts">
     import type Perspective from '../acai/Perspective'
-    import type { LanguageController } from '../main-thread/LanguageController';
 
     export let perspective: Perspective
-    export let languageController: LanguageController
 
     import IconButton from '@smui/icon-button';
     import Fab, {Icon, Label} from '@smui/fab';
@@ -18,6 +16,7 @@
     const dispatch = createEventDispatcher();
     import { query, mutation, getClient } from "svelte-apollo";
     import { gql } from '@apollo/client';
+    import { LANGUAGES } from './graphql_queries'
 
     $: if(perspective) {
         getClient().subscribe({
@@ -85,6 +84,12 @@
         }
     `)
 
+    $: CREATE_EXPRESSION = mutation(gql`
+        mutation CreateExpression($languageAddress: String, $content: String) {
+            createExpression(input: { languageAddress: $languageAddress, content: $content})
+        }
+    `)
+
     let linksStore
     let constructionMenu
     let languages = []
@@ -107,6 +112,7 @@
     let isLinking = false
     let linkingSource
     let linkingCursor = {}
+    let dropMove = false
 
     let showSettings = false
 
@@ -154,6 +160,24 @@
         }
     }
 
+    function dist(c1, c2) {
+        const x = c1.x - c2.x
+        const y = c1.y - c2.y
+        return Math.sqrt(x*x + y*y)
+    }
+
+    function hoveredLink(coords, moving) {
+        for(const i in $linksStore.data.links) {
+            const link = $linksStore.data.links[i]
+            if(link.data.source === "root" && link.data.predicate?.startsWith("coord2d://") && link.data.target != moving.target) {
+                const linkCoords = linkTo2D(link)
+                const d = dist(coords, linkCoords)
+                if(d < 300) return link
+            }
+        }
+        return null
+    }
+
     function handleMouseMove(event) {
         const d = zoomNormalizedMouseMove({x: event.movementX, y: event.movementY })
         if(isPanning) {
@@ -166,6 +190,12 @@
             point.x += d.x
             point.y += d.y
             movingLink.data.predicate = coordToPredicate(point)
+            if(hoveredLink(point, movingLink.data)) {
+                dropMove = true
+                console.log("drop move!")
+            } else {
+                dropMove = false
+            }
             //linksStore.update(movingLink)
         }
 
@@ -259,16 +289,24 @@
         constructionMenu.open(event.clientX, event.clientY)
     }
 
-    languageController.getLanguagesWithExpressionUI().then( installedLanguages => {
-        console.log("Got installed languages:", JSON.stringify(installedLanguages))
-        languages = installedLanguages
+    getClient().query({
+        query: LANGUAGES,
+        variables: { filter: "expressionUI" }
+    }).then( expressionUILanguages => {
+        console.log("Got installed languages:", JSON.stringify(expressionUILanguages))
+        languages = expressionUILanguages.data.languages
     })
 
 
     async function commitExpression(lang, content, container) {
-        const expressionRef = await languageController.createPublicExpression(lang, content)
-        console.log("Got ExpressionRef:", JSON.stringify(expressionRef))
-        const exprURL = exprRef2String(expressionRef)
+        const creationResult = await CREATE_EXPRESSION({
+            variables: {
+                languageAddress: lang.address,
+                content
+            }
+        })
+
+        const exprURL = creationResult.data.createExpression
         console.log("Created new expression:", exprURL)
         
         ADD_LINK({
@@ -283,7 +321,18 @@
     async function createExpression(lang) {
         console.log("Create expression:", lang, JSON.stringify(lang))
         if(!constructorIconComponents[lang.name]) {
-            const code = await languageController.getConstructorIcon(lang)
+            const { data } = await getClient().query({
+                query: gql`
+                { 
+                    language(address: "${lang.address}") {
+                        constructorIcon {
+                            code
+                        }
+                    }
+                }
+                `
+            })
+            const code = data.language.constructorIcon.code
             const ConstructorIcon = iconComponentFromString(code, lang.name)
             constructorIconComponents[lang.name] = ConstructorIcon
             customElements.define(lang.name+"-constructor", ConstructorIcon);
@@ -305,18 +354,6 @@
 
     $: if(perspective) {
         linksStore = query(ALL_LINKS_QUERY)
-    }
-    $: if(perspective && perspective.linksSharingLanguage && perspective.linksSharingLanguage != "") {
-        languageController.addLinkObserver(perspective.linksSharingLanguage, (added, removed) => {
-            console.log("LINK OBSERVER got links to add:", added)
-            console.log("LINK OBSERVER got links to remove:", removed)
-            added?.forEach(l => {
-                linksStore.add(l)
-            })
-            removed?.forEach(l => {
-                linksStore.remove(l)
-            })
-        })
     }
 
     function linkTo2D(link) {
@@ -376,6 +413,7 @@
 
 </script>
 
+<h1>${perspective.uuid}</h1>
 
 <div class="perspective-container" 
     on:mousewheel={handleMouseWheel}
@@ -399,23 +437,21 @@
                             style={`position: absolute; transform: translateX(${linkTo2D(movingLink).x}px) translateY(${linkTo2D(movingLink).y}px);`}
                             data-link-id={hashLinkExpression(link)}
                             >
-                            <ExpressionIcon class="inline" 
-                                expressionURL={link.data.target}
-                                {languageController}>
-                            </ExpressionIcon>
+                            <div class="drop-move-container" style={`transform: translateZ(${dropMove ? -2000 : 0}px);`}>
+                                <ExpressionIcon expressionURL={link.data.target}/>
+                            </div>
                         </li>
                         {:else}
                         <li class="inline expression-list-container" 
                             style={`position: absolute; transform: translateX(${linkTo2D(link).x}px) translateY(${linkTo2D(link).y}px);`}
                             data-link-id={hashLinkExpression(link)}
                             >
-                            <ExpressionIcon class="inline" 
+                            <ExpressionIcon
                                 expressionURL={link.data.target}
                                 parentLink={link}
                                 on:context-menu={onExpressionContextMenu} 
                                 rotated={iconStates[link.data.target] === 'rotated'}
-                                selected={linkingSource?.data?.target === link.data.target}
-                                {languageController}>
+                                selected={linkingSource?.data?.target === link.data.target}>
                             </ExpressionIcon>
                         </li>
                         {/if}
@@ -440,11 +476,8 @@
             <Label>Perspective Settings</Label>
         </div>
         <div id="settings">
-            <PerspectiveSettings perspective={perspective} 
-                languageController={languageController}
+            <PerspectiveSettings perspective={JSON.parse(JSON.stringify(perspective))} 
                 on:submit={()=> {
-                    console.log(perspective)
-                    dispatch('settings-changed', perspective.uuid)
                     showSettings = false
                 }}
                 on:cancel={()=> {
@@ -535,5 +568,9 @@
         top: 0;
         left: 0;
         transform: translateX(-10000px) translateY(-10000px);
+    }
+
+    .drop-move-container {
+        transition: transform 0.5s;
     }
 </style>

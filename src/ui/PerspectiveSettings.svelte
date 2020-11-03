@@ -2,7 +2,6 @@
     export let perspective
     export let perspectiveId
     export let perspectiveStore
-    export let languageController
 
     import FormField from '@smui/form-field';
     import Textfield from '@smui/textfield'
@@ -10,24 +9,33 @@
     import Select, {Option} from '@smui/select';
     import { createEventDispatcher } from 'svelte';
     import DataTable, {Head, Body, Row, Cell} from '@smui/data-table';
+    import { LANGUAGES, PERSPECTIVE, UPDATE_PERSPECTIVE } from './graphql_queries'
+    import { getClient, mutation, query } from 'svelte-apollo'
 
     const dispatch = createEventDispatcher();
 
 
-    if(!perspective && perspectiveId && perspectiveStore)
-        perspective = $perspectiveStore[perspectiveId]
-    let linkLanguages = []
-    let linkLanguagesLoadingDone = false
-    
-    async function loadLinkLanguages() {
-        linkLanguages = await languageController.getLanguagesWithLinksAdapter()
-        linkLanguagesLoadingDone = true
+    if(!perspective && perspectiveId) {
+        getClient().query({
+            query: PERSPECTIVE,
+            variables: { uuid: perspectiveId }
+        }).then(p => {
+            perspective = {
+                name: p.name,
+                uuid: p.uuid,
+                linksSharingLanguage: p.linksSharingLanguage,
+            }
+        })
     }
 
-    loadLinkLanguages()
-    
+    let linkLanguages = query(LANGUAGES, {
+        variables: { filter: "linksAdapter" }
+    })   
 
     function save() {
+        mutation(UPDATE_PERSPECTIVE)({
+            variables: perspective
+        })
         dispatch('submit', perspective.uuid)
     }
 
@@ -36,7 +44,7 @@
     }
 </script>
 
-{#if perspective}
+{#if perspective.name}
 <div class="perspective-settings-container">
     <h1>Perspective Settings</h1>
     <DataTable>
@@ -48,10 +56,10 @@
             <Row>
                 <Cell>Link sharing language:</Cell>
                 <Cell>
-                    {#if linkLanguagesLoadingDone}
+                    {#if !$linkLanguages.loading}
                     <Select bind:value={perspective.linksSharingLanguage} label="Sharing Language">
                         <Option value=""></Option>
-                        {#each linkLanguages as lang}
+                        {#each $linkLanguages.data.languages as lang}
                         <Option value={lang.address} selected={lang.address == perspective.linksSharingLanguage}>{lang.name}</Option>
                         {/each}
                     </Select>

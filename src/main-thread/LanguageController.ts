@@ -16,7 +16,7 @@ import type Address from '../acai/Address';
 const builtInLanguages = [
     'note-ipfs',
     'url-iframe',
-    'gun-links',
+    //'gun-links',
     'ipfs-links',
     'junto-shortform'
 ].map(l => `./src/languages/${l}/build/bundle.js`)
@@ -161,7 +161,7 @@ export class LanguageController {
             // Ok, first we assume its a PublicSharing put adapter...
             // @ts-ignore
             address = await putAdapter.createPublic(content)
-        } catch(e) {
+        } catch(pubE) {
             try {
                 // ...and if it's not, let's try to treat it like a
                 // ReadOnlyLangauge..
@@ -169,7 +169,7 @@ export class LanguageController {
                 address = await putAdapter.addressOf(content)
             } catch(e) {
                 // If both don't work, we don't know what to do with this put adapter :/
-                throw new Error(`Incompatible putAdapter in Languge ${JSON.stringify(lang)}\nPutAdapter: ${Object.keys(putAdapter)}`)
+                throw new Error(`Incompatible putAdapter in Languge ${JSON.stringify(lang)}\nPutAdapter: ${Object.keys(putAdapter)}. Error from read only: ${e.toString()}. Error from public adapter: ${pubE.toString()}`,)
             }
         }
 

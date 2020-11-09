@@ -23,6 +23,10 @@
 
     input {
         width: 100%;
-        height: 200px;
+        height: 300px;
+        color: black;
+        background: yellowgreen;
+        text-align: center;
+        font-size: 20px;
     }
 </style>

@@ -75,6 +75,7 @@
     }
 
     $: if(!$queryResult.loading) {
+        console.log($queryResult);
         expression = $queryResult.data.expression
         customElementName = iconComponentName(expression.language.address)
     }

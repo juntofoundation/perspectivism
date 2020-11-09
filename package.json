@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "build-languages": "for OUTPUT in $(ls src/languages); do echo \"Building: $OUTPUT\" && cd src/languages/$OUTPUT && npm i && npm run build && cd -; done",
+    "build-junto": "echo \"Building: Junto\" && cd src/languages/junto-shortform && npm i && npm run build && cd -",
     "build": "tsc && rollup -c && npm run build-languages",
     "dev": "tsc && rollup -c -w",
     "serve": "sirv public",

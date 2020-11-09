@@ -11,7 +11,7 @@ const axios = require('axios').default;
 class ShortFormPutAdapter implements PublicSharing {
     #agent: Agent
     #idToken: String
-    #url: String = "http://localhost:8080/v0.2.3-alpha/"
+    #url: String = "http://3.22.168.239/v0.2.3-alpha/"
     #context: String
 
     constructor(context: LanguageContext) {
@@ -66,7 +66,7 @@ class ShortFormPutAdapter implements PublicSharing {
 export default class ShortFormAdapter implements ExpressionAdapter {
     #agent: Agent
     #idToken: String
-    #url: String = "http://localhost:8080/v0.2.3-alpha/"
+    #url: String = "http://3.22.168.239/v0.2.3-alpha/"
 
     putAdapter: PublicSharing
 
@@ -81,10 +81,12 @@ export default class ShortFormAdapter implements ExpressionAdapter {
     }
 
     async get(address: Address): Promise<void | Expression> {
+        console.log("getting exp", address);
         const expression = await axios.get(this.#url + "expressions/" + address)
             .then(function (response) {
                 return response.data
             })
+        console.log("got", expression);
 
         return {
             author: new Agent(expression.creator.address),

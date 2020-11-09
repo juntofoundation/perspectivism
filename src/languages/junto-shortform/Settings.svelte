@@ -10,8 +10,8 @@
     } from 'amazon-cognito-identity-js';
 
     let poolData = {
-        UserPoolId: 'us-east-2_XshZxLWso', // Your user pool id here
-        ClientId: '35caon8bjbsghlqdnth1cu45f2', // Your client id here
+        UserPoolId: 'us-east-2_Cd8BaNB2i', // Your user pool id here
+        ClientId: '6mi247legoqtbohjrrffga2lp4', // Your client id here
     };
     let userpool = new CognitoUserPool(poolData);
     export let settings: object

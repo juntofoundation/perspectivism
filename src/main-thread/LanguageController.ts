@@ -18,7 +18,8 @@ const builtInLanguages = [
     'url-iframe',
     //'gun-links',
     'ipfs-links',
-    'junto-shortform'
+    'junto-shortform',
+    'junto-photoform'
 ].map(l => `./src/languages/${l}/build/bundle.js`)
 
 const aliases = {

@@ -1,6 +1,6 @@
+import type Expression from "../../acai/Expression"
 import type Address from '../../acai/Address'
 import Agent from '../../acai/Agent'
-import type Expression from '../../acai/Expression'
 import type { ExpressionAdapter, GetByAuthorAdapter, PublicSharing } from '../../acai/Language'
 import type LanguageContext from '../../acai/LanguageContext'
 
@@ -90,7 +90,6 @@ class PhotoFormPutAdapter implements PublicSharing {
             context: this.#context
         }
 
-        //Todo post the actual data
         return axios.post(this.#url + "expressions", expressionPostData)
             .then(function (response) {
                 return response.data.address
@@ -137,26 +136,6 @@ export default class PhotoFormAdapter implements ExpressionAdapter {
             data: expression.expression_data
         }
 
-    }
-
-    /// Get expressions authored by a given Agent/Identity
-    async get_by_author(author: Agent, count: number, page: number): Promise<void | Expression> {
-        const expressions = await axios.get(this.#url + "users/" + author.did + "?pagination_position=" + page.toString)
-            .then(function (response) {
-                return response.data
-            })
-            .catch(function (error) {
-                log_error(error)
-                throw error
-            })
-        expressions.result.forEach(function(part, index, expressionsArray) {
-            expressionsArray[index] = {
-                author: new Agent(expressionsArray[index].creator.address),
-                timestamp: expressionsArray[index].created_at,
-                data: expressionsArray[index].expression_data
-            };
-        });
-        return expressions
     }
 
     /// Send an expression to someone privately p2p

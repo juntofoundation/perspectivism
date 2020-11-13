@@ -4,6 +4,7 @@ import type Language from '../../acai/Language'
 import type LanguageContext from '../../acai/LanguageContext'
 import type { Interaction } from '../../acai/Language'
 import PhotoFormAdapter from './adapter'
+import PhotoFormAuthorAdapter from './authorAdapter'
 import Icon from './build/Icon.js'
 import ConstructorIcon from './build/ConstructorIcon.js'
 import { JuntoSettingsUI } from './SettingsUI'
@@ -26,12 +27,14 @@ export const name: string = "junto-photoform"
 
 export default function create(context: LanguageContext): Language {
     const expressionAdapter = new PhotoFormAdapter(context)
+    const authorAdaptor = new PhotoFormAuthorAdapter(context)
     const settingsUI = new JuntoSettingsUI()
     const expressionUI = new PhotoFormExpressionUI()
 
     return {
         name,
         expressionAdapter,
+        authorAdaptor,
         iconFor,
         constructorIcon,
         interactions,

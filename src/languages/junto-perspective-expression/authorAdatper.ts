@@ -6,7 +6,7 @@ import type LanguageContext from '../../acai/LanguageContext';
 
 const axios = require('axios').default;
 
-export default class ShortFormAuthorAdapter implements GetByAuthorAdapter {
+export default class PerspectiveGetByAuthorAdapter implements GetByAuthorAdapter {
     #agent: Agent
     #idToken: String
     #url: String = "http://localhost:8080/v0.3.0-alpha/"
@@ -27,10 +27,9 @@ export default class ShortFormAuthorAdapter implements GetByAuthorAdapter {
     ///Here we can see its not actually possible to do this.
     ///Get expressions authored by a given Agent/Identity
     async getByAuthor(author: Agent, count: number, page: number): Promise<void | Expression[]> {
-        const expressions = await axios.get(this.#url + "users/" + author.did + "/expressions?pagination_position=" + page.toString 
-            + "&type=ShortForm&root_expressions=true&sub_expressions=false")
+        const expressions = await axios.get(this.#url + "users/" + author.did + "/perspectives")
             .then(function (response) {
-                return response.data.root_expressions.results
+                return response.data
             })
             .catch(function (error) {
                 log_error(error)
@@ -38,9 +37,9 @@ export default class ShortFormAuthorAdapter implements GetByAuthorAdapter {
             })
         expressions.result.forEach(function(part, index, expressionsArray) {
             expressionsArray[index] = {
-                author: new Agent(expressionsArray[index].creator.address),
+                author: new Agent(expressionsArray[index].creator),
                 timestamp: expressionsArray[index].created_at,
-                data: expressionsArray[index].expression_data
+                data: expressionsArray[index]
             };
         });
         return expressions

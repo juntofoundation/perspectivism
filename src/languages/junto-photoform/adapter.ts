@@ -5,7 +5,6 @@ import type { ExpressionAdapter, GetByAuthorAdapter, PublicSharing } from '../..
 import type LanguageContext from '../../acai/LanguageContext'
 
 const axios = require('axios').default;
-const FormData = require('form-data');
 
 //TODO implement get all adapter that can take a set of expression addresses and return the data for each of them
 

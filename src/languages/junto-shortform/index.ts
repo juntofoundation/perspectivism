@@ -4,6 +4,7 @@ import type Language from '../../acai/Language'
 import type LanguageContext from '../../acai/LanguageContext'
 import type { Interaction } from '../../acai/Language'
 import ShortFormAdapter from './adapter'
+import ShortFormAuthorAdapter from './authorAdapter'
 import Icon from './build/Icon.js'
 import ConstructorIcon from './build/ConstructorIcon.js'
 import { JuntoSettingsUI } from './SettingsUI'
@@ -26,12 +27,14 @@ export const name: string = "junto-shortform"
 
 export default function create(context: LanguageContext): Language {
     const expressionAdapter = new ShortFormAdapter(context)
+    const authorAdaptor = new ShortFormAuthorAdapter(context)
     const settingsUI = new JuntoSettingsUI()
     const expressionUI = new ShortFormExpressionUI()
 
     return {
         name,
         expressionAdapter,
+        authorAdaptor,
         iconFor,
         constructorIcon,
         interactions,

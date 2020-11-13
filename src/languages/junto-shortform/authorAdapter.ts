@@ -6,7 +6,7 @@ import type LanguageContext from '../../acai/LanguageContext';
 
 const axios = require('axios').default;
 
-export default class PhotoFormAuthorAdapter implements GetByAuthorAdapter {
+export default class ShortFormAuthorAdapter implements GetByAuthorAdapter {
     #agent: Agent
     #idToken: String
     #url: String = "http://localhost:8080/v0.3.0-alpha/"
@@ -28,7 +28,7 @@ export default class PhotoFormAuthorAdapter implements GetByAuthorAdapter {
     ///Get expressions authored by a given Agent/Identity
     async getByAuthor(author: Agent, count: number, page: number): Promise<void | Expression[]> {
         const expressions = await axios.get(this.#url + "users/" + author.did + "/expressions?pagination_position=" + page.toString 
-            + "&type=PhotoForm&root_expressions=true&sub_expressions=false")
+            + "&type=ShortForm&root_expressions=true&sub_expressions=false")
             .then(function (response) {
                 return response.data.root_expressions.results
             })

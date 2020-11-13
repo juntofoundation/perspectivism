@@ -100,26 +100,6 @@ export default class ShortFormAdapter implements ExpressionAdapter {
 
     }
 
-    /// Get expressions authored by a given Agent/Identity
-    async get_by_author(author: Agent, count: number, page: number): Promise<void | Expression> {
-        const expressions = await axios.get(this.#url + "users/" + author.did + "?pagination_position=" + page.toString)
-            .then(function (response) {
-                return response.data
-            })
-            .catch(function (error) {
-                log_error(error)
-                throw error
-            })
-        expressions.result.forEach(function(part, index, expressionsArray) {
-            expressionsArray[index] = {
-                author: new Agent(expressionsArray[index].creator.address),
-                timestamp: expressionsArray[index].created_at,
-                data: expressionsArray[index].expression_data
-            };
-        });
-        return expressions
-    }
-
     /// Send an expression to someone privately p2p
     send_private(to: Agent, content: object) {
         console.log("send_private not implemented for junto")

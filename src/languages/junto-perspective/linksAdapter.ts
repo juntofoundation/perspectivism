@@ -131,7 +131,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
 
                 data.forEach(element => {
                     let exp = new Expression()
-                    exp.author = element.address;
+                    exp.author = new Agent(element.address);
                     exp.timestamp = element.created_at;
                     exp.data = element;
                     out.push(exp);
@@ -164,9 +164,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
             throw Error("Predicate required on getLinks query")
         }
 
-        return new Promise((resolve) => {
-            resolve(out);
-        })
+        return out
     }
 
     addCallback(callback: NewLinksObserver) {

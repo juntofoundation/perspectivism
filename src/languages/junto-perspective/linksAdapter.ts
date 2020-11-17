@@ -28,10 +28,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
         //@ts-ignore
         this.#idToken = context.customSettings.cognitoSession ? context.customSettings.cognitoSession.idToken : undefined;
         //@ts-ignore
-        this.#context = context.customSettings.context ? this.customSettings.context : "Collective";
-
-        //Perhaps here we should actually get the junto-backend-perspective uuid this link lang represents via some data passed in by context?
-        this.#represents = undefined;
+        this.#represents = context.customSettings.represents ? this.customSettings.represents : undefined;
 
         axios.defaults.headers.common['Authorization'] = this.#idToken
         axios.defaults.headers.common['Content-Type'] = "application/json"

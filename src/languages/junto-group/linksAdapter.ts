@@ -21,10 +21,7 @@ export class JuntoGroupLinkAdapter implements LinksAdapter {
         //@ts-ignore
         this.#idToken = context.customSettings.cognitoSession ? context.customSettings.cognitoSession.idToken : undefined;
         //@ts-ignore
-        this.#context = context.customSettings.context ? this.customSettings.context : "Collective";
-
-        //Perhaps here we should actually get the junto-backend-group uuid this link lang represents via some data passed in by context?
-        this.#represents = undefined;
+        this.#represents = context.customSettings.represents ? this.customSettings.represents : undefined;
 
         axios.defaults.headers.common['Authorization'] = this.#idToken
         axios.defaults.headers.common['Content-Type'] = "application/json"
@@ -39,9 +36,9 @@ export class JuntoGroupLinkAdapter implements LinksAdapter {
     }
 
     others() {
-        //Essentially sharing with one other "agent" which is the Junto backend; this is not in DID format just yet
-        //@ts-ignore
-        return axios.get(this.#url + "/groups/" + this.#represents.data.address + "/members?pagination_position=0")
+        if (this.#represents != undefined) {
+            //@ts-ignore
+            return axios.get(this.#url + "/groups/" + this.#represents.data.address + "/members?pagination_position=0")
             .then(function (response) {
                 let out = [];
                 response.data.results.forEach(element => {
@@ -53,6 +50,9 @@ export class JuntoGroupLinkAdapter implements LinksAdapter {
                 log_error(error)
                 throw error
             });
+        } else {
+            throw Error("group-expression that this link langauge represents should be init'd")
+        }
     }
 
     async addLink(link: Expression) {

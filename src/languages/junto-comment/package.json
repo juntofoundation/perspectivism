@@ -1,7 +1,7 @@
 {
-  "name": "junto-group",
+  "name": "junto-comment",
   "version": "0.0.1",
-  "description": "An ACAI Language for managing a group on the Junto Centralized API",
+  "description": "An ACAI Language for managing comments on the Junto Centralized API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

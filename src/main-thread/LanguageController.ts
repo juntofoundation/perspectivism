@@ -19,7 +19,8 @@ const builtInLanguages = [
     //'gun-links',
     'ipfs-links',
     'junto-shortform',
-    'junto-photoform'
+    'junto-photoform',
+    'junto-perspective'
 ].map(l => `./src/languages/${l}/build/bundle.js`)
 
 const aliases = {

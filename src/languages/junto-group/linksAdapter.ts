@@ -7,16 +7,9 @@ import type ExpressionRef from "../../acai/ExpressionRef";
 
 const axios = require('axios').default;
 
-/// This link language is used to represent the links for a SINGLE perspective; language should be replicated for each junto-perspective that it should represent
+/// This link language is used to represent the links for a SINGLE group; language should be replicated for each junto-group that it should represent
 
-/// Current points of doubt
-/// Right now the "expression" metadata for this Junto-perspective is stored in another expression language and then referenced here by making it a property on the object. 
-/// Something about this feels off but I cant figure out any other clean way to have this link-lang know what junto perspective is is supposed to represent
-
-/// Getting links via the predicate is also feeling a little messy. Below I mention having some type that allow us to go from type -> predicate string -> type. 
-/// That should ensure there are no mistakes made to predicate "syntax" when calling the getLinks function. This should help make things a little cleaner but still feels hacky.
-
-export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
+export class JuntoGroupLinkAdapter implements LinksAdapter {
     #agent: Agent
     #idToken: String
     #url: String = "http://localhost:8080/v0.3.0-alpha/"
@@ -30,7 +23,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
         //@ts-ignore
         this.#context = context.customSettings.context ? this.customSettings.context : "Collective";
 
-        //Perhaps here we should actually get the junto-backend-perspective uuid this link lang represents via some data passed in by context?
+        //Perhaps here we should actually get the junto-backend-group uuid this link lang represents via some data passed in by context?
         this.#represents = undefined;
 
         axios.defaults.headers.common['Authorization'] = this.#idToken
@@ -47,20 +40,50 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
 
     others() {
         //Essentially sharing with one other "agent" which is the Junto backend; this is not in DID format just yet
-        return [new Agent("https://api.junto.foundation")]
+        //@ts-ignore
+        return axios.get(this.#url + "/groups/" + this.#represents.data.address + "/members?pagination_position=0")
+            .then(function (response) {
+                let out = [];
+                response.data.results.forEach(element => {
+                    out.push(new Agent(element.user.address));
+                });
+                return out
+            })
+            .catch(function (error) {
+                log_error(error)
+                throw error
+            });
     }
 
     async addLink(link: Expression) {
-        //If the link data as no data; then we know an agent is to be added to this perspective
-        if (Object.keys(link.data).length === 0) {
+        //If the link data contains permissions data then its likely trying to add a user to the group
+        if ("permissions" in link.data) {
             //For now we will just assume that the Agent string is not actually a DID but instead just a UUID of agent
             //When this is a DID we will have to extract the uuid from the string
             let target_agent = link.author;
             if (this.#represents != undefined) {
                 //@ts-ignore
-                await axios.post(this.#url + "/perspectives/" + this.#represents.data.address + "/users", [{
-                    user_address: target_agent
-                }]).then(function (response) {
+                await axios.post(this.#url + "/groups/" + this.#represents.data.address + "/members", [{
+                    user_address: target_agent,
+                    //@ts-ignore
+                    permissions: link.data.permissions
+                }])
+                    .then(function (response) {
+                        return response.data
+                    })
+                    .catch(function (error) {
+                        log_error(error)
+                        throw error
+                    });
+            } else {
+                throw Error("group-expression that this link langauge represents should be init'd")
+            }
+        } else if ("expression_data" in link.data) {
+            if (this.#represents != undefined) {
+                //@ts-ignore
+                link.data.context = this.#represents.data.address;
+
+                await axios.post(this.#url + "/expressions", link.data).then(function (response) {
                     return response.data
                 })
                 .catch(function (error) {
@@ -68,26 +91,26 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
                     throw error
                 });
             } else {
-                throw Error("Perspective-expression that this link langauge represents should be init'd")
+                throw Error("group-expression that this link langauge represents should be init'd") 
             }
-        } else if ("perspective_type" in link.data){
-            //Perspective metadata is being added to this link-lang for future reference
+        } else if ("group_type" in link.data){
+            //group metadata is being added to this link-lang for future reference
             //Should this actually be here? 
             this.#represents = link;
         } else {
-            throw Error("You can only add agents & perspective-expression to this link-language!")
+            throw Error("You can only add agents & group-expression to this link-language!")
         }
     }
 
     async updateLink(oldLinkExpression: Expression, newLinkExpression: Expression) {
-        if ("perspective_type" in oldLinkExpression.data) {
-            if ("perspective_type" in newLinkExpression.data) {
+        if ("group_type" in oldLinkExpression.data) {
+            if ("group_type" in newLinkExpression.data) {
                 this.#represents = newLinkExpression;
             } else {
-                throw Error("Expected newLinkExpression to be an expression of junto-perspective-expression")
+                throw Error("Expected newLinkExpression to be an expression of junto-group-expression")
             }
         } else {
-            throw Error("Expected oldLinkExpression to be an expression of junto-perspective-expression")
+            throw Error("Expected oldLinkExpression to be an expression of junto-group-expression")
         }
     }
 
@@ -98,7 +121,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
             let target_agent = link.author;
             if (this.#represents != undefined) {
                 //@ts-ignore
-                await axios.delete(this.#url + "/perspectives/" + this.#represents.data.address + "/users", [{
+                await axios.delete(this.#url + "/groups/" + this.#represents.data.address + "/members", [{
                     user_address: target_agent
                 }]).then(function (response) {
                     return response.data
@@ -108,7 +131,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
                     throw error
                 });
             } else {
-                throw Error("Perspective-expression that this link langauge represents should be init'd")
+                throw Error("group-expression that this link langauge represents should be init'd")
             }
         } else {
             throw Error("Only agents can be removed from this link-language")
@@ -123,7 +146,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
         if (query.predicate != undefined) {
             if (query.predicate == "users") {
                 //@ts-ignore
-                let data = await axios.get(this.#url + "/perspectives/" + query.source + "/users")
+                let data = await axios.get(this.#url + "/groups/" + query.source + "/members?pagination_position=0")
                 .then(function (response) {
                     return response.data
                 })
@@ -134,7 +157,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
 
                 data.forEach(element => {
                     let exp = new Expression()
-                    exp.author = new Agent(element.address);
+                    exp.author = new Agent(element.user.address);
                     exp.timestamp = element.created_at;
                     exp.data = element;
                     out.push(exp);
@@ -146,8 +169,7 @@ export class JuntoPerspectiveLinksAdapter implements LinksAdapter {
                 //As to ensure the right query format we might want some adapter/type
                 //which can be used to add type-safe query information which is then deserialize/serialized to and from a predicate query string
                 //@ts-ignore
-                let data = await axios.get(this.#url + "/expressions?context" + query.source + "&context_type=" + this.#represents.data.perspective_type 
-                    + "&pagination_position=0")
+                let data = await axios.get(this.#url + "/expressions?context" + query.source + "&context_type=Group&pagination_position=0")
                 .then(function (response) {
                     return response.data
                 })

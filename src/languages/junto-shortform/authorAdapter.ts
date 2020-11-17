@@ -36,7 +36,7 @@ export default class ShortFormAuthorAdapter implements GetByAuthorAdapter {
                 log_error(error)
                 throw error
             })
-        expressions.result.forEach(function(part, index, expressionsArray) {
+        expressions.forEach(function(part, index, expressionsArray) {
             expressionsArray[index] = {
                 author: new Agent(expressionsArray[index].creator.address),
                 timestamp: expressionsArray[index].created_at,

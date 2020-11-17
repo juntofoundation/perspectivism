@@ -1,7 +1,7 @@
 import Expression from "../../acai/Expression";
 import type { LinksAdapter, NewLinksObserver } from "../../acai/Language";
 import type { LinkQuery } from "../../acai/Links";
-import type Agent from "../../acai/Agent";
+import Agent from "../../acai/Agent";
 import type LanguageContext from "../../acai/LanguageContext";
 import type ExpressionRef from "../../acai/ExpressionRef";
 
@@ -36,7 +36,7 @@ export class JuntoCommentLinkAdapter implements LinksAdapter {
     }
 
     public() {
-        return false
+        return true
     }
 
     others() {
@@ -45,6 +45,7 @@ export class JuntoCommentLinkAdapter implements LinksAdapter {
         return []
     }
 
+    //Should this be where comments are being created? Or should this be done in comment expression languages
     async addLink(link: Expression) {
         if ("expression_type" in link.data) {
             //@ts-ignore
@@ -108,7 +109,7 @@ export class JuntoCommentLinkAdapter implements LinksAdapter {
                 });
                 data.results.forEach(element => {
                     let exp = new Expression()
-                    exp.author = element.creator.address;
+                    exp.author = new Agent(element.creator.address);
                     exp.timestamp = element.created_at;
                     exp.data = element;
                     out.push(exp);

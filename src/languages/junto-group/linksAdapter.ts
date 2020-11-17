@@ -32,7 +32,16 @@ export class JuntoGroupLinkAdapter implements LinksAdapter {
     }
 
     public() {
-        return false
+        if (this.#represents == undefined) {
+            return false
+        } else {
+            //@ts-ignore
+            if (this.#represents.data.privacy == "Public") {
+                return true
+            } else {
+                return false
+            }
+        }
     }
 
     others() {
@@ -139,6 +148,7 @@ export class JuntoGroupLinkAdapter implements LinksAdapter {
     }
 
     async getLinks(query: LinkQuery): Promise<Expression[]> {
+        //Again here as with perspective link language we need some way to pass in channels and other query parameters
         if (query.source == undefined) {
             throw Error("source for link query must be supplied");
         };

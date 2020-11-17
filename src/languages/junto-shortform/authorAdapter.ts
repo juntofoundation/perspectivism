@@ -17,7 +17,7 @@ export default class ShortFormAuthorAdapter implements GetByAuthorAdapter {
         //@ts-ignore
         this.#idToken = context.customSettings.cognitoSession ? context.customSettings.cognitoSession.idToken : undefined;
         //@ts-ignore
-        this.#context = context.customSettings.context ? this.customSettings.context : "Collective";
+        this.#context = context.customSettings.context ? context.customSettings.context : "Collective";
 
         axios.defaults.headers.common['Authorization'] = this.#idToken
         axios.defaults.headers.common['Content-Type'] = "application/json"

@@ -6,7 +6,7 @@ import type LanguageContext from '../../acai/LanguageContext';
 
 const axios = require('axios').default;
 
-export default class PerspectiveGetByAuthorAdapter implements GetByAuthorAdapter {
+export default class ShortFormAuthorAdapter implements GetByAuthorAdapter {
     #agent: Agent
     #idToken: String
     #url: String = "http://localhost:8080/v0.3.0-alpha/"
@@ -17,7 +17,7 @@ export default class PerspectiveGetByAuthorAdapter implements GetByAuthorAdapter
         //@ts-ignore
         this.#idToken = context.customSettings.cognitoSession ? context.customSettings.cognitoSession.idToken : undefined;
         //@ts-ignore
-        this.#context = context.customSettings.context ? context.customSettings.context : "Collective";
+        this.#context = context.customSettings.context ? this.customSettings.context : "Collective";
 
         axios.defaults.headers.common['Authorization'] = this.#idToken
         axios.defaults.headers.common['Content-Type'] = "application/json"
@@ -27,19 +27,20 @@ export default class PerspectiveGetByAuthorAdapter implements GetByAuthorAdapter
     ///Here we can see its not actually possible to do this.
     ///Get expressions authored by a given Agent/Identity
     async getByAuthor(author: Agent, count: number, page: number): Promise<void | Expression[]> {
-        const expressions = await axios.get(this.#url + "users/" + author.did + "/perspectives")
+        const expressions = await axios.get(this.#url + "users/" + author.did 
+            + "/expressions?pagination_position=" + page.toString + "&type=ShortForm&root_expressions=false&sub_expressions=true")
             .then(function (response) {
-                return response.data
+                return response.data.sub_expressions.results
             })
             .catch(function (error) {
                 log_error(error)
                 throw error
             })
-        expressions.result.forEach(function(part, index, expressionsArray) {
+        expressions.forEach(function(part, index, expressionsArray) {
             expressionsArray[index] = {
-                author: new Agent(expressionsArray[index].creator),
+                author: new Agent(expressionsArray[index].creator.address),
                 timestamp: expressionsArray[index].created_at,
-                data: expressionsArray[index]
+                data: expressionsArray[index].expression_data
             };
         });
         return expressions

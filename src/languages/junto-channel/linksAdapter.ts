@@ -10,7 +10,8 @@ const axios = require('axios').default;
 /// This link language is used to represent the links for a given channel of communication on Junto.
 ///
 /// How can this link language be used to represent multiple channels? Ontologically a perspective/linklanguage should represent one social space
-/// but on the API its possible to query by multiple channels at once, can we represent that here?
+/// but on the API its possible to query by multiple channels at once, can we represent that here? Perhaps we need a link language for each number/combination
+/// of channel queries. i.e junto-channel, junto-two-channel, ... junto-n-channel?
 ///
 /// Inside the constructor I am also allowing the passing of a context so we can make channel queries for any given context using this language. 
 ///
@@ -41,7 +42,7 @@ export class JuntoChannelAdapter implements LinksAdapter {
     }
 
     writable() {
-        return false
+        return true
     }
 
     public() {

@@ -6,8 +6,6 @@ import type LanguageContext from '../../acai/LanguageContext'
 
 const axios = require('axios').default;
 
-//TODO implement get all adapter that can take a set of expression addresses and return the data for each of them
-
 class ShortFormPutAdapter implements PublicSharing {
     #agent: Agent
     #idToken: String
@@ -19,7 +17,8 @@ class ShortFormPutAdapter implements PublicSharing {
         //@ts-ignore
         this.#idToken = context.customSettings.cognitoSession ? context.customSettings.cognitoSession.idToken : undefined;
         //@ts-ignore
-        this.#context = context.customSettings.context ? this.customSettings.context : "Collective";
+        this.#context = context.customSettings.context ? context.customSettings.context : "Collective";
+        //also likely would want a context type here
 
         axios.defaults.headers.common['Authorization'] = this.#idToken
         axios.defaults.headers.common['Content-Type'] = "application/json"
@@ -36,7 +35,6 @@ class ShortFormPutAdapter implements PublicSharing {
             context: this.#context
         }
 
-        //Todo post the actual data
         return axios.post(this.#url + "expressions", expressionPostData)
             .then(function (response) {
                 return response.data.address
@@ -81,7 +79,8 @@ export default class ShortFormAdapter implements ExpressionAdapter {
     }
 
     async get(address: Address): Promise<void | Expression> {
-        console.log("getting exp", address);
+        //In the constructor above we are allowing of the setting of a context; here we can read this context and make the post request 
+        //to either collective or some other context such as a group.
         const expression = await axios.get(this.#url + "expressions/" + address)
             .then(function (response) {
                 return response.data
@@ -90,7 +89,6 @@ export default class ShortFormAdapter implements ExpressionAdapter {
                 log_error(error)
                 throw error
             })
-        console.log("got", expression);
 
         return {
             author: new Agent(expression.creator.address),

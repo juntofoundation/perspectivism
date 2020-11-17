@@ -25,7 +25,7 @@ export class JuntoCommentLinkAdapter implements LinksAdapter {
         //@ts-ignore
         this.#idToken = context.customSettings.cognitoSession ? context.customSettings.cognitoSession.idToken : undefined;
         //@ts-ignore
-        this.#represents = context.customSettings.represents ? this.customSettings.represents : undefined;
+        this.#represents = context.customSettings.represents ? context.customSettings.represents : undefined;
 
         axios.defaults.headers.common['Authorization'] = this.#idToken
         axios.defaults.headers.common['Content-Type'] = "application/json"

@@ -7,14 +7,23 @@ import type ExpressionRef from "../../acai/ExpressionRef";
 
 const axios = require('axios').default;
 
-/// This link language is used to represent the links for a SINGLE group; language should be replicated for each junto-group that it should represent
+/// This link language is used to represent the links for a given channel of communication on Junto.
+///
+/// How can this link language be used to represent multiple channels? Ontologically a perspective/linklanguage should represent one social space
+/// but on the API its possible to query by multiple channels at once, can we represent that here?
+///
+/// Inside the constructor I am also allowing the passing of a context so we can make channel queries for any given context using this language. 
+///
+/// Again we also have the same problem as with other languages where I am unable to pass pagination data inside; solution might be to create some custom
+/// string syntax for the predicate 
 
-export class JuntoChannelSearchLinkAdapter implements LinksAdapter {
+export class JuntoChannelAdapter implements LinksAdapter {
     #agent: Agent
     #idToken: String
     #url: String = "http://localhost:8080/v0.3.0-alpha/"
     #context: String
     #represents: Expression | undefined
+    #contextType: String | undefined
 
     constructor(context: LanguageContext) {
         this.#agent = context.agent
@@ -22,6 +31,10 @@ export class JuntoChannelSearchLinkAdapter implements LinksAdapter {
         this.#idToken = context.customSettings.cognitoSession ? context.customSettings.cognitoSession.idToken : undefined;
         //@ts-ignore
         this.#represents = context.customSettings.represents ? context.customSettings.represents : undefined;
+        //@ts-ignore
+        this.#context = context.customSettings.context ? context.customSettings.context : undefined;
+        //@ts-ignore
+        this.#contextType = context.customSettings.contextType ? context.customSettings.contextType : "";
 
         axios.defaults.headers.common['Authorization'] = this.#idToken
         axios.defaults.headers.common['Content-Type'] = "application/json"
@@ -37,7 +50,8 @@ export class JuntoChannelSearchLinkAdapter implements LinksAdapter {
 
     others() {
         //Essentially sharing with one other "agent" which is the Junto backend; this is not in DID format just yet
-        return [new Agent("https://api.junto.foundation")]
+        //return [new Agent("https://api.junto.foundation")]
+        return []
     }
 
     async addLink(link: Expression) {
@@ -54,7 +68,9 @@ export class JuntoChannelSearchLinkAdapter implements LinksAdapter {
 
     async getLinks(query: LinkQuery): Promise<Expression[]> {
         let out: Array<Expression> = [] as Expression[];
-        let results = await axios.get(this.#url + "/search/channels?pagination_arguments=0&name=" + query.predicate)
+
+        //@ts-ignore
+        let results = await axios.get(this.#url + "/expressions?pagination_arguments=0&context=" + this.#context + "&channel1=" + query.predicate + "&context_type" + this.#contextType)
             .then(function (response) {
                 return response.data
             })
